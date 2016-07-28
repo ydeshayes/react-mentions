@@ -73,6 +73,9 @@ const MentionsInput = React.createClass({
     onSelect: PropTypes.func,
     onBlur: PropTypes.func,
     onChange: PropTypes.func,
+    onQueryChange: PropTypes.func,
+
+    disableMentions: PropTypes.bool,
 
     children: PropTypes.oneOfType([
       PropTypes.element,
@@ -133,6 +136,7 @@ const MentionsInput = React.createClass({
       ...(!readOnly && !disabled && {
         onChange: this.handleChange,
         onSelect: this.handleSelect,
+        onMouseDown: this.handleMouseDownOnTextArea,
         onKeyDown: this.handleKeyDown,
         onBlur: this.handleBlur,
       })
@@ -157,7 +161,8 @@ const MentionsInput = React.createClass({
       <input
         type="text"
         ref="input"
-        { ...props } />
+        { ...props }
+      />
     );
   },
 
@@ -165,13 +170,15 @@ const MentionsInput = React.createClass({
     return (
       <textarea
         ref="input"
-        { ...props } />
+        { ...props }
+      />
     );
   },
 
   renderSuggestionsOverlay: function() {
-    if(!utils.isNumber(this.state.selectionStart)) {
+    if(!utils.isNumber(this.state.selectionStart) || this.props.disableMentions) {
       // do not show suggestions when the input does not have the focus
+      // or if mentions are disabled
       return null;
     }
 
@@ -190,11 +197,14 @@ const MentionsInput = React.createClass({
         suggestions={this.state.suggestions}
         onSelect={this.addMention}
         onMouseDown={this.handleSuggestionsMouseDown}
-        onMouseEnter={ (focusIndex) => this.setState({ 
-          focusIndex, 
-          scrollFocusedIntoView: false 
+        onMouseEnter={ (focusIndex) => this.setState({
+          focusIndex,
+          scrollFocusedIntoView: false
         }) }
-        isLoading={this.isLoading()} />
+        isLoading={this.isLoading()}
+        renderLoadingIndicator={this.props.renderLoadingIndicator}
+        renderError={this.props.renderError}
+      />
     );
   },
 
@@ -242,6 +252,10 @@ const MentionsInput = React.createClass({
 
   // Handle input element's change event
   handleChange: function(ev) {
+    this._deactivateSuggestions = false;
+    this.setState({
+      focusIndex: 0
+    });
 
     if(document.activeElement !== ev.target) {
       // fix an IE bug (blur from empty input element with placeholder attribute trigger "input" event)
@@ -296,6 +310,10 @@ const MentionsInput = React.createClass({
 
   // Handle input element's select event
   handleSelect: function(ev) {
+    if (this.props.onCursorChange) {
+      this.props.onCursorChange();
+    }
+
     // keep track of selection range / caret position
     this.setState({
       selectionStart: ev.target.selectionStart,
@@ -304,7 +322,8 @@ const MentionsInput = React.createClass({
 
     // refresh suggestions queries
     var el = this.refs.input;
-    if(ev.target.selectionStart === ev.target.selectionEnd) {
+    if(ev.target.selectionStart === ev.target.selectionEnd && !this.props.disableMentions
+      && this._deactivateSuggestions === false) {
       this.updateMentionsQueries(el.value, ev.target.selectionStart);
     } else {
       this.clearSuggestions();
@@ -317,6 +336,8 @@ const MentionsInput = React.createClass({
   },
 
   handleKeyDown: function(ev) {
+    this._deactivateSuggestions = false;
+
     // do not intercept key events if the suggestions overlay is not shown
     var suggestionsCount = utils.countSuggestions(this.state.suggestions);
 
@@ -355,12 +376,22 @@ const MentionsInput = React.createClass({
     }
   },
 
+  handleMouseDownOnTextArea: function(ev) {
+    this._deactivateSuggestions = false;
+  },
+
   shiftFocus: function(delta) {
     let suggestionsCount = utils.countSuggestions(this.state.suggestions);
+
 
     this.setState({
       focusIndex: (suggestionsCount + this.state.focusIndex + delta) % suggestionsCount,
       scrollFocusedIntoView: true
+    }, () => {
+      if (this.props.onHighlightedMention) {
+        this.props.onHighlightedMention(this.state.suggestions, this.state.focusIndex);
+      }
+
     });
   },
 
@@ -504,6 +535,7 @@ const MentionsInput = React.createClass({
 
       var regex = _getTriggerRegex(child.props.trigger);
       var match = substring.match(regex);
+
       if(match) {
         var querySequenceStart = substring.indexOf(match[1], match.index);
         that.queryData(match[2], child, querySequenceStart, querySequenceStart+match[1].length, plainTextValue);
@@ -523,6 +555,11 @@ const MentionsInput = React.createClass({
   queryData: function(query, mentionDescriptor, querySequenceStart, querySequenceEnd, plainTextValue) {
     var provideData = _getDataProvider(mentionDescriptor.props.data);
     var snycResult = provideData(query, this.updateSuggestions.bind(null, this._queryId, mentionDescriptor, query, querySequenceStart, querySequenceEnd, plainTextValue));
+
+    if (this.props.onQueryChange) {
+      this.props.onQueryChange(query);
+    }
+
     if(snycResult instanceof Array) {
       this.updateSuggestions(this._queryId, mentionDescriptor, query, querySequenceStart, querySequenceEnd, plainTextValue, snycResult);
     }
@@ -543,11 +580,24 @@ const MentionsInput = React.createClass({
     };
 
     this.setState({
-      suggestions: utils.extend({}, this.state.suggestions, update)
+      // suggestions: utils.extend({}, this.state.suggestions, update)
+      suggestions: update
     });
   },
 
   addMention: function(suggestion, {mentionDescriptor, querySequenceStart, querySequenceEnd, plainTextValue}) {
+    var onBeforeAdd = mentionDescriptor.props.onBeforeAdd;
+    if (onBeforeAdd) {
+      var skipAdd = onBeforeAdd(suggestion.id, suggestion.display, mentionDescriptor.props.type);
+
+      if (skipAdd) {
+        this.clearSuggestions();
+        this._deactivateSuggestions = true;
+        this.refs.input.focus();
+        return;
+      }
+    }
+
     // Insert mention in the marked up value at the correct position
     var value = LinkedValueUtils.getValue(this.props) || "";
     var start = utils.mapPlainTextIndex(value, this.props.markup, querySequenceStart, 'START', this.props.displayTransform);
@@ -645,4 +695,3 @@ const substyle = defaultStyle({
     }
   }
 });
-

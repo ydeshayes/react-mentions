@@ -223,7 +223,7 @@ module.exports = {
     var mentionStart = this.findStartOfMentionInPlainText(value, markup, indexInPlainText, displayTransform);
     return mentionStart !== undefined && mentionStart !== indexInPlainText
   },
-  
+
   // Applies a change from the plain text textarea to the underlying marked up value
   // guided by the textarea text selection ranges before and after the change
   applyChangeToValue: function(value, markup, plainTextValue, selectionStartBeforeChange, selectionEndBeforeChange, selectionEndAfterChange, displayTransform) {
@@ -290,7 +290,7 @@ module.exports = {
         newValue = this.spliceString(value, mappedSpliceStart, mappedSpliceEnd, insert);
       }
     }
-    
+
     return newValue;
   },
 
@@ -358,7 +358,7 @@ module.exports = {
   },
 
   getSuggestion: function(suggestions, index) {
-    return this.getSuggestions(suggestions).reduce((result, { suggestions, descriptor }) => [
+    var result = this.getSuggestions(suggestions).reduce((result, { suggestions, descriptor }) => [
       ...result,
 
       ...suggestions.map((suggestion) => ({
@@ -366,6 +366,8 @@ module.exports = {
         descriptor: descriptor
       }))
     ], [])[index];
+
+    return result;
   }
 
 }

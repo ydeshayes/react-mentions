@@ -69,6 +69,7 @@ module.exports = React.createClass({
   },
 
   requestEmail: function(search) {
+    console.log('requestEmail', search);
     return [
       { id: search, display: search }
     ];

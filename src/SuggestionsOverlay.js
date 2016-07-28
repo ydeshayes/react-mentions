@@ -15,6 +15,8 @@ class SuggestionsOverlay extends Component {
     scrollFocusedIntoView: PropTypes.bool,
     isLoading: PropTypes.bool,
     onSelect: PropTypes.func,
+    renderLoadingIndicator: PropTypes.func,
+    renderError: PropTypes.func,
   };
 
   static defaultProps = {
@@ -33,7 +35,7 @@ class SuggestionsOverlay extends Component {
     const { top: topContainer } = suggestions.getBoundingClientRect();
     top = top - topContainer + scrollTop;
     bottom = bottom - topContainer + scrollTop;
-    
+
     if(top < scrollTop) {
       suggestions.scrollTop = top
     } else if(bottom > suggestions.offsetHeight) {
@@ -43,7 +45,9 @@ class SuggestionsOverlay extends Component {
 
   render() {
     // do not show suggestions until there is some data
-    if(utils.countSuggestions(this.props.suggestions) === 0 && !this.props.isLoading) {
+    if(utils.countSuggestions(this.props.suggestions) === 0 &&
+        !this.props.isLoading &&
+        !this.props.renderError()) {
       return null;
     }
 
@@ -58,6 +62,7 @@ class SuggestionsOverlay extends Component {
         </ul>
 
         { this.renderLoadingIndicator() }
+        { this.renderError() }
       </div>
     );
   }
@@ -108,7 +113,16 @@ class SuggestionsOverlay extends Component {
       return;
     }
 
-    return <LoadingIndicator { ...substyle(this.props, "loadingIndicator") } />
+    return this.props.renderLoadingIndicator() ||
+      <LoadingIndicator { ...substyle(this.props, "loadingIndicator") } />
+  }
+
+  renderError () {
+    if (utils.countSuggestions(this.props.suggestions)) {
+      return;
+    }
+
+    return this.props.renderError();
   }
 
   handleMouseEnter(index, ev) {
@@ -136,5 +150,8 @@ const substyle = defaultStyle({
     margin: 0,
     padding: 0,
     listStyleType: "none",
-  }
+  },
+
+  renderLoadingIndicator: null,
+  renderError: null,
 });
