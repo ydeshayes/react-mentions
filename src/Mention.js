@@ -39,7 +39,8 @@ Mention.propTypes = {
 
   isLoading: PropTypes.bool,
   className: PropTypes.string,
-  style: PropTypes.object
+  style: PropTypes.object,
+  renderHeader: PropTypes.func,
 };
 
 Mention.defaultProps = {

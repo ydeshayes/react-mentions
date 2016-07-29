@@ -16,7 +16,8 @@ class SuggestionsOverlay extends Component {
     isLoading: PropTypes.bool,
     onSelect: PropTypes.func,
     renderLoadingIndicator: PropTypes.func,
-    renderError: PropTypes.func,
+    renderStatus: PropTypes.func,
+    renderHeader: PropTypes.func,
   };
 
   static defaultProps = {
@@ -47,7 +48,7 @@ class SuggestionsOverlay extends Component {
     // do not show suggestions until there is some data
     if(utils.countSuggestions(this.props.suggestions) === 0 &&
         !this.props.isLoading &&
-        !this.props.renderError()) {
+        !this.props.renderStatus) {
       return null;
     }
 
@@ -56,13 +57,14 @@ class SuggestionsOverlay extends Component {
         {...substyle(this.props)}
         onMouseDown={this.props.onMouseDown}>
 
+        { this.renderHeader() }
+
         <ul ref="suggestions"
           {...substyle(this.props, "list") }>
           { this.renderSuggestions() }
         </ul>
 
-        { this.renderLoadingIndicator() }
-        { this.renderError() }
+        { this.renderStatus() }
       </div>
     );
   }
@@ -113,16 +115,23 @@ class SuggestionsOverlay extends Component {
       return;
     }
 
-    return this.props.renderLoadingIndicator() ||
-      <LoadingIndicator { ...substyle(this.props, "loadingIndicator") } />
+    return <LoadingIndicator { ...substyle(this.props, "loadingIndicator") } />
   }
 
-  renderError () {
-    if (utils.countSuggestions(this.props.suggestions)) {
-      return;
+  renderStatus () {
+    if (!this.props.renderStatus) {
+      return false;
     }
 
-    return this.props.renderError();
+    return this.props.renderStatus();
+  }
+
+  renderHeader () {
+    if (!this.props.renderHeader || utils.countSuggestions(this.props.suggestions) === 0) {
+      return false;
+    }
+
+    return this.props.renderHeader();
   }
 
   handleMouseEnter(index, ev) {
@@ -153,5 +162,6 @@ const substyle = defaultStyle({
   },
 
   renderLoadingIndicator: null,
-  renderError: null,
+  renderStatus: null,
+  renderHeader: null,
 });

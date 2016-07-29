@@ -203,7 +203,8 @@ const MentionsInput = React.createClass({
         }) }
         isLoading={this.isLoading()}
         renderLoadingIndicator={this.props.renderLoadingIndicator}
-        renderError={this.props.renderError}
+        renderStatus={this.props.renderStatus}
+        renderHeader={this.state.renderHeader}
       />
     );
   },
@@ -311,7 +312,7 @@ const MentionsInput = React.createClass({
   // Handle input element's select event
   handleSelect: function(ev) {
     if (this.props.onCursorChange) {
-      this.props.onCursorChange();
+      this.props.onCursorChange(ev.target.selectionStart, ev.target.selectionEnd);
     }
 
     // keep track of selection range / caret position
@@ -580,8 +581,8 @@ const MentionsInput = React.createClass({
     };
 
     this.setState({
-      // suggestions: utils.extend({}, this.state.suggestions, update)
-      suggestions: update
+      suggestions: update,
+      renderHeader: mentionDescriptor.props.renderHeader,
     });
   },
 
