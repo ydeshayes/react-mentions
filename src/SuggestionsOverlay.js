@@ -64,7 +64,7 @@ class SuggestionsOverlay extends Component {
           { this.renderSuggestions() }
         </ul>
 
-        { this.renderStatus() }
+        { !utils.countSuggestions(this.props.suggestions) && this.renderStatus() }
       </div>
     );
   }

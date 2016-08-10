@@ -74,6 +74,7 @@ const MentionsInput = React.createClass({
     onBlur: PropTypes.func,
     onChange: PropTypes.func,
     onQueryChange: PropTypes.func,
+    onUpdateMentionsQueries: PropTypes.func,
 
     disableMentions: PropTypes.bool,
 
@@ -93,6 +94,8 @@ const MentionsInput = React.createClass({
       onKeyDown: () => null,
       onSelect: () => null,
       onBlur: () => null,
+      onQueryChange: () => null,
+      onUpdateMentionsQueries: () => null,
       style: {}
     };
   },
@@ -311,9 +314,7 @@ const MentionsInput = React.createClass({
 
   // Handle input element's select event
   handleSelect: function(ev) {
-    if (this.props.onCursorChange) {
-      this.props.onCursorChange(ev.target.selectionStart, ev.target.selectionEnd);
-    }
+    this.props.onSelect(ev);
 
     // keep track of selection range / caret position
     this.setState({
@@ -333,7 +334,6 @@ const MentionsInput = React.createClass({
     // sync highlighters scroll position
     this.updateHighlighterScroll();
 
-    this.props.onSelect(ev);
   },
 
   handleKeyDown: function(ev) {
@@ -529,6 +529,7 @@ const MentionsInput = React.createClass({
     var substring = plainTextValue.substring(0, caretPosition);
 
     var that = this;
+    this._cursorInsideOfQuery = false;
     React.Children.forEach(this.props.children, function(child) {
       if(!child) {
         return;
@@ -538,10 +539,13 @@ const MentionsInput = React.createClass({
       var match = substring.match(regex);
 
       if(match) {
+        that._cursorInsideOfQuery = true;
         var querySequenceStart = substring.indexOf(match[1], match.index);
         that.queryData(match[2], child, querySequenceStart, querySequenceStart+match[1].length, plainTextValue);
       }
     });
+
+    this.props.onUpdateMentionsQueries(this._cursorInsideOfQuery);
   },
 
   clearSuggestions: function() {
@@ -557,9 +561,7 @@ const MentionsInput = React.createClass({
     var provideData = _getDataProvider(mentionDescriptor.props.data);
     var snycResult = provideData(query, this.updateSuggestions.bind(null, this._queryId, mentionDescriptor, query, querySequenceStart, querySequenceEnd, plainTextValue));
 
-    if (this.props.onQueryChange) {
-      this.props.onQueryChange(query);
-    }
+    this.props.onQueryChange(query);
 
     if(snycResult instanceof Array) {
       this.updateSuggestions(this._queryId, mentionDescriptor, query, querySequenceStart, querySequenceEnd, plainTextValue, snycResult);
